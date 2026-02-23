@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { createEnvProvider } from 'src/config/config-factory';
+import { createEnvProvider } from 'src/core/config/config-factory';
 import { RedisConfigService, RedisEnv } from './redis-config.service';
 import { RedisService } from './redis.service';
 

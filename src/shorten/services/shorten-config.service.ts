@@ -5,7 +5,7 @@ export class ShortenEnv {
 	@IsNotEmpty()
 	@IsString()
 	@MinLength(1)
-	readonly EXTERNAL_URL!: string;
+	readonly SHORT_URL_BASE!: string;
 
 	@IsNotEmpty()
 	@IsNumber()
@@ -15,11 +15,11 @@ export class ShortenEnv {
 
 @Injectable()
 export class ShortenConfigService {
-	public readonly externalUrl: string;
+	public readonly shortUrlBase: string;
 	public readonly shortUrlCacheTTLSeconds: number;
 
 	constructor(config: ShortenEnv) {
-		this.externalUrl = config.EXTERNAL_URL;
+		this.shortUrlBase = config.SHORT_URL_BASE;
 		this.shortUrlCacheTTLSeconds = config.SHORT_URL_CACHE_TTL_SECONDS;
 	}
 }
