@@ -44,7 +44,7 @@ describe('ShortenService', () => {
 			const url = 'https://example.com';
 			const record = { id: 1, url, short_code: SHORT_CODE, access_count: 0 };
 
-			sequenceService.getNextValue.mockResolvedValue(1);
+			sequenceService.getNextValue.mockResolvedValue(BigInt(1));
 			encondingService.encondeBase62.mockReturnValue(SHORT_CODE);
 			prismaService.short_urls.create.mockResolvedValue(record as any);
 
