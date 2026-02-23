@@ -1,0 +1,15 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model short_urls {
+  id           Int    @id(map: "short_pkey") @default(autoincrement())
+  url          String
+  short_code   String @unique(map: "short_urls_short_code_unique") @db.VarChar(11)
+  access_count Int    @default(0)
+}
