@@ -34,20 +34,20 @@ describe('ShortenController', () => {
 	describe('shorten', () => {
 		it('should create a short URL and return it', async () => {
 			const url = 'https://example.com.br';
-			const result = { url: url, shortCode: '123456' };
-			shortenService.shorten.mockResolvedValue(result as any);
+			const shortenUrlResult = { url: 'https://test.com.br', short_code: '123456', id: 1, short_url: 'https://short.com.br/1234', access_count: 0 };
+			shortenService.shorten.mockResolvedValue(shortenUrlResult);
 
 			const resp = await shortenController.shorten({ url });
 
 			expect(shortenService.shorten).toHaveBeenCalledWith(url);
-			expect(resp).toMatchObject(result);
+			expect(resp).toMatchObject(shortenUrlResult);
 		});
 	});
 
 	describe('find', () => {
 		it('should return the shorten URL data', async () => {
 			const id = 1;
-			const shortenUrlResult = { url: 'https://example.com.br', shortCode: '123456' } as any;
+			const shortenUrlResult = { url: 'https://test.com.br', short_code: '123456', id: 1, short_url: 'https://short.com.br/1234', access_count: 0 };
 			shortenService.find.mockResolvedValue(shortenUrlResult);
 
 			const shortenUrl = await shortenController.find(id);
