@@ -83,6 +83,7 @@ export class ShortenService {
 			url: record.url,
 			short_code: record.short_code,
 			short_url: this.buildShortUrl(record.short_code),
+			access_count: record.access_count,
 		};
 	}
 

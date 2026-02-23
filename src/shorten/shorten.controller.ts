@@ -1,20 +1,8 @@
-import {
-	Body,
-	Controller,
-	Delete,
-	Get,
-	HttpCode,
-	HttpStatus,
-	NotFoundException,
-	Param,
-	ParseIntPipe,
-	Patch,
-	Post,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Prisma } from 'generated/prisma/client';
-import { ShortenDto } from './dto/shorten.dto';
 import { ShortenResponseDto } from './dto/shorten-response.dto';
+import { ShortenDto } from './dto/shorten.dto';
 import { UpdateOriginalUrlDto } from './dto/update-original-url.dto';
 import { ShortenService } from './shorten.service';
 

@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { mock } from 'jest-mock-extended';
-import { ShortenCacheService } from 'src/shorten/shorten-cache.service';
+import { ShortenCacheService } from 'src/shorten/services/shorten-cache.service';
 import { ShortenService } from 'src/shorten/shorten.service';
 import { OriginalUrlNotFoundException } from './error/original-url-not-found.error';
 import { RedirectService } from './redirect.service';
@@ -42,7 +42,7 @@ describe('RedirectService', () => {
 
 		it('should return URL from DB, populate cache and skip TTL refresh on cache miss', async () => {
 			shortenCacheService.get.mockResolvedValue(null);
-			shortenService.findByShortCode.mockResolvedValue({ url: originalUrl } as any);
+			shortenService.findByShortCode.mockResolvedValue({ id: 1, short_code: '', access_count: 1, url: originalUrl });
 
 			const result = await redirectService.getOrignalUrl(shortCode);
 
