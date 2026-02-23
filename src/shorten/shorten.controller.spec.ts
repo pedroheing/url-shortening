@@ -68,7 +68,7 @@ describe('ShortenController', () => {
 		it('should update the short URL and return it', async () => {
 			const id = 1;
 			const url = 'https://new.example.com';
-			const result = { id, url, short_code: 'abc123', access_count: 0, externalUrl: 'https://short.co/abc123' };
+			const result = { id, url, short_code: 'abc123', access_count: 0, short_url: 'https://short.co/abc123' };
 			shortenService.update.mockResolvedValue(result);
 
 			const resp = await shortenController.update(id, { url });

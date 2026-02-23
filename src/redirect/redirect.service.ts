@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ShortenCacheService } from 'src/shorten/shorten-cache.service';
+import { ShortenCacheService } from 'src/shorten/services/shorten-cache.service';
 import { ShortenService } from 'src/shorten/shorten.service';
 import { OriginalUrlNotFoundException } from './error/original-url-not-found.error';
 

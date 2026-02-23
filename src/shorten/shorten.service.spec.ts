@@ -2,19 +2,19 @@ import { Test } from '@nestjs/testing';
 import { mock, mockDeep } from 'jest-mock-extended';
 import { EncondingService } from 'src/core/enconding/enconding.service';
 import { PrismaService } from 'src/core/prisma/prisma.service';
-import { SequenceService } from './sequence.service';
-import { ShortenCacheService } from './shorten-cache.service';
-import { ShortenConfigService } from './shorten-config.service';
+import { SequenceService } from './services/sequence.service';
+import { ShortenCacheService } from './services/shorten-cache.service';
+import { ShortenConfigService } from './services/shorten-config.service';
 import { ShortenService } from './shorten.service';
 
 describe('ShortenService', () => {
-	const EXTERNAL_URL = 'https://short.co';
+	const SHORT_URL_BASE = 'https://short.co';
 	const SHORT_CODE = 'abc123';
-	const EXTERNAL_URL_FULL = `${EXTERNAL_URL}/${SHORT_CODE}`;
+	const SHORT_URL = `${SHORT_URL_BASE}/${SHORT_CODE}`;
 
 	const sequenceService = mock<SequenceService>();
 	const shortenConfigService = mock<ShortenConfigService>({
-		externalUrl: EXTERNAL_URL,
+		shortUrlBase: SHORT_URL_BASE,
 	});
 	const prismaService = mockDeep<PrismaService>();
 	const encondingService = mock<EncondingService>();
@@ -50,7 +50,7 @@ describe('ShortenService', () => {
 
 			const result = await shortenService.shorten(url);
 
-			expect(result).toEqual({ ...record, externalUrl: EXTERNAL_URL_FULL });
+			expect(result).toEqual({ ...record, short_url: SHORT_URL });
 			expect(prismaService.short_urls.create).toHaveBeenCalledWith({
 				data: { short_code: SHORT_CODE, url },
 			});
@@ -74,7 +74,7 @@ describe('ShortenService', () => {
 
 			const result = await shortenService.update(id, url);
 
-			expect(result).toEqual({ ...record, externalUrl: EXTERNAL_URL_FULL });
+			expect(result).toEqual({ ...record, short_url: SHORT_URL });
 			expect(prismaService.short_urls.update).toHaveBeenCalledWith({
 				where: { id },
 				data: { url },
@@ -93,7 +93,7 @@ describe('ShortenService', () => {
 
 			const result = await shortenService.delete(id);
 
-			expect(result).toEqual({ ...record, externalUrl: EXTERNAL_URL_FULL });
+			expect(result).toEqual({ ...record, short_url: SHORT_URL });
 			expect(prismaService.short_urls.delete).toHaveBeenCalledWith({ where: { id } });
 			expect(shortenCacheService.invalidate).toHaveBeenCalledWith(SHORT_CODE);
 		});
