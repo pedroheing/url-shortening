@@ -46,7 +46,7 @@ describe('ShortenService', () => {
 
 			sequenceService.getNextValue.mockResolvedValue(BigInt(1));
 			encondingService.encondeBase62.mockReturnValue(SHORT_CODE);
-			prismaService.short_urls.create.mockResolvedValue(record as any);
+			prismaService.short_urls.create.mockResolvedValue(record);
 
 			const result = await shortenService.shorten(url);
 
@@ -70,7 +70,7 @@ describe('ShortenService', () => {
 			const url = 'https://new.example.com';
 			const record = { id, url, short_code: SHORT_CODE, access_count: 0 };
 
-			prismaService.short_urls.update.mockResolvedValue(record as any);
+			prismaService.short_urls.update.mockResolvedValue(record);
 
 			const result = await shortenService.update(id, url);
 
@@ -89,7 +89,7 @@ describe('ShortenService', () => {
 			const url = 'https://example.com';
 			const record = { id, url, short_code: SHORT_CODE, access_count: 0 };
 
-			prismaService.short_urls.delete.mockResolvedValue(record as any);
+			prismaService.short_urls.delete.mockResolvedValue(record);
 
 			const result = await shortenService.delete(id);
 
