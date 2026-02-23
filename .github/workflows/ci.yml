@@ -38,7 +38,7 @@ jobs:
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
             - name: Lint
-              run: pnpm run lint
+              run: pnpm run lint:check
     build:
         needs: [format, lint]
         runs-on: ubuntu-latest
