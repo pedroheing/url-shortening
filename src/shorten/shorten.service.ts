@@ -25,7 +25,10 @@ export class ShortenService {
 				url: url,
 			},
 		});
-		await this.shortenCacheService.set(shortCode, url);
+		await this.shortenCacheService.set(shortCode, {
+			shortUrlId: record.short_url_id,
+			url: record.url,
+		});
 		return this.buildResponse(record);
 	}
 
@@ -39,7 +42,7 @@ export class ShortenService {
 	public async find(id: number): Promise<ShortenResponseDto | null> {
 		const record = await this.prismaService.short_urls.findUnique({
 			where: {
-				id: id,
+				short_url_id: id,
 			},
 		});
 		if (!record) return null;
@@ -57,20 +60,23 @@ export class ShortenService {
 	public async update(id: number, url: string): Promise<ShortenResponseDto> {
 		const record = await this.prismaService.short_urls.update({
 			where: {
-				id: id,
+				short_url_id: id,
 			},
 			data: {
 				url: url,
 			},
 		});
-		await this.shortenCacheService.set(record.short_code, url);
+		await this.shortenCacheService.set(record.short_code, {
+			url: url,
+			shortUrlId: id,
+		});
 		return this.buildResponse(record);
 	}
 
 	public async delete(id: number): Promise<ShortenResponseDto> {
 		const record = await this.prismaService.short_urls.delete({
 			where: {
-				id: id,
+				short_url_id: id,
 			},
 		});
 		await this.shortenCacheService.invalidate(record.short_code);
@@ -79,11 +85,10 @@ export class ShortenService {
 
 	private buildResponse(record: short_urls): ShortenResponseDto {
 		return {
-			id: record.id,
+			short_url_id: record.short_url_id,
 			url: record.url,
 			short_code: record.short_code,
 			short_url: this.buildShortUrl(record.short_code),
-			access_count: record.access_count,
 		};
 	}
 

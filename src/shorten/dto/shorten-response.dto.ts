@@ -5,7 +5,7 @@ export class ShortenResponseDto {
 		description: 'The unique numeric identifier of the shortened URL',
 		example: 1,
 	})
-	readonly id!: number;
+	readonly short_url_id!: number;
 
 	@ApiProperty({
 		description: 'The original URL',
@@ -24,10 +24,4 @@ export class ShortenResponseDto {
 		example: 'http://localhost:3000/aB3xZ9',
 	})
 	readonly short_url!: string;
-
-	@ApiProperty({
-		description: 'The number of times the short URL has been accessed',
-		example: 1,
-	})
-	readonly access_count!: number;
 }
