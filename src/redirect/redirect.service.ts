@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { ClicksQueueService } from 'src/analytics/queues/clicks/clicks-queue.service';
 import { UserAgentResult } from 'src/common/decorators/user-agent.decorator';
 import { GeolocationService } from 'src/core/geolocation/geolocation.interface';
+import { ClicksQueueService } from 'src/metrics/queues/clicks/clicks-queue.service';
 import { ShortenCacheService, ShortUrlCache } from 'src/shorten/services/shorten-cache.service';
 import { ShortenService } from 'src/shorten/shorten.service';
 import { OriginalUrlNotFoundException } from './error/original-url-not-found.error';

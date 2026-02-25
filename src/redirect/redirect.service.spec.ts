@@ -1,8 +1,8 @@
 import { Test } from '@nestjs/testing';
 import { mock } from 'jest-mock-extended';
-import { ClicksQueueService } from 'src/analytics/queues/clicks/clicks-queue.service';
 import { UserAgentResult } from 'src/common/decorators/user-agent.decorator';
 import { GeolocationService } from 'src/core/geolocation/geolocation.interface';
+import { ClicksQueueService } from 'src/metrics/queues/clicks/clicks-queue.service';
 import { ShortUrlCache, ShortenCacheService } from 'src/shorten/services/shorten-cache.service';
 import { ShortenService } from 'src/shorten/shorten.service';
 import { OriginalUrlNotFoundException } from './error/original-url-not-found.error';
