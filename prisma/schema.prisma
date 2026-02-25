@@ -8,8 +8,30 @@ datasource db {
 }
 
 model short_urls {
-  id           Int    @id(map: "short_pkey") @default(autoincrement())
+  short_url_id Int      @id(map: "short_pkey") @default(autoincrement())
   url          String
-  short_code   String @unique(map: "short_urls_short_code_unique") @db.VarChar(11)
-  access_count Int    @default(0)
+  short_code   String   @unique(map: "short_urls_short_code_unique") @db.VarChar(11)
+  clicks       clicks[]
+}
+
+model clicks {
+  click_id              Int        @default(autoincrement())
+  short_url_id          Int
+  created_at            DateTime   @default(now()) @db.Timestamptz(6)
+  ip_address            String?    @db.VarChar(45)
+  country               String?    @db.VarChar(100)
+  region                String?    @db.VarChar(50)
+  timezone              String?    @db.VarChar(100)
+  browser_name          String?    @db.VarChar(50)
+  browser_version       String?    @db.VarChar(50)
+  browser_version_major String?    @db.VarChar(10)
+  os                    String?    @db.VarChar(50)
+  os_version            String?    @db.VarChar(10)
+  device_type           String?    @db.VarChar(100)
+  device_vendor         String?    @db.VarChar(100)
+  device_model          String?    @db.VarChar(100)
+  city                  String?    @db.VarChar(100)
+  short_urls            short_urls @relation(fields: [short_url_id], references: [short_url_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_clicks_short_urls")
+
+  @@id([click_id, short_url_id])
 }

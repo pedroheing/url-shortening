@@ -1,17 +1,14 @@
 import { Module } from '@nestjs/common';
-
-import { createEnvProvider } from 'src/core/config/config-factory';
+import { RedisModule } from 'src/core/infra/redis/redis.module';
 import { CacheService } from './cache.interface';
-import { RedisConfigService, RedisEnv } from './providers/redis/redis-config.service';
-import { RedisService } from './providers/redis/redis.service';
+import { RedisCacheService } from './providers/redis/redis-cache.service';
 
 @Module({
+	imports: [RedisModule],
 	providers: [
-		createEnvProvider(RedisEnv),
-		RedisConfigService,
 		{
 			provide: CacheService,
-			useClass: RedisService,
+			useClass: RedisCacheService,
 		},
 	],
 	exports: [CacheService],
