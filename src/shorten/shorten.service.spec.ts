@@ -51,7 +51,11 @@ describe('ShortenService', () => {
 
 			const result = await shortenService.shorten(url);
 
-			expect(result).toEqual({ ...record, short_url: SHORT_URL });
+			expect(result).toEqual({
+				url: record.url,
+				shortCode: record.short_code,
+				shortUrl: SHORT_URL,
+			});
 			expect(prismaService.short_urls.create).toHaveBeenCalledWith({
 				data: { short_code: SHORT_CODE, url },
 			});
@@ -78,7 +82,11 @@ describe('ShortenService', () => {
 
 			const result = await shortenService.update(id, url);
 
-			expect(result).toEqual({ ...record, short_url: SHORT_URL });
+			expect(result).toEqual({
+				url: record.url,
+				shortCode: record.short_code,
+				shortUrl: SHORT_URL,
+			});
 			expect(prismaService.short_urls.update).toHaveBeenCalledWith({
 				where: { short_url_id: id },
 				data: { url },
@@ -100,7 +108,11 @@ describe('ShortenService', () => {
 
 			const result = await shortenService.delete(id);
 
-			expect(result).toEqual({ ...record, short_url: SHORT_URL });
+			expect(result).toEqual({
+				url: record.url,
+				shortCode: record.short_code,
+				shortUrl: SHORT_URL,
+			});
 			expect(prismaService.short_urls.delete).toHaveBeenCalledWith({ where: { short_url_id: id } });
 			expect(shortenCacheService.invalidate).toHaveBeenCalledWith(SHORT_CODE);
 		});

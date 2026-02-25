@@ -36,9 +36,9 @@ describe('ShortenController', () => {
 			const url = 'https://example.com.br';
 			const shortenUrlResult = {
 				url: 'https://test.com.br',
-				short_code: '123456',
-				short_url_id: 1,
-				short_url: 'https://short.com.br/1234',
+				shortCode: '123456',
+				shortUrlId: 1,
+				shortUrl: 'https://short.com.br/1234',
 			};
 			shortenService.shorten.mockResolvedValue(shortenUrlResult);
 
@@ -54,9 +54,9 @@ describe('ShortenController', () => {
 			const id = 1;
 			const shortenUrlResult = {
 				url: 'https://test.com.br',
-				short_code: '123456',
-				short_url_id: 1,
-				short_url: 'https://short.com.br/1234',
+				shortCode: '123456',
+				shortUrlId: 1,
+				shortUrl: 'https://short.com.br/1234',
 				access_count: 0,
 			};
 			shortenService.find.mockResolvedValue(shortenUrlResult);
@@ -79,7 +79,7 @@ describe('ShortenController', () => {
 		it('should update the short URL and return it', async () => {
 			const id = 1;
 			const url = 'https://new.example.com';
-			const result = { short_url_id: id, url, short_code: 'abc123', short_url: 'https://short.co/abc123' };
+			const result = { shortUrlId: id, url, shortCode: 'abc123', shortUrl: 'https://short.co/abc123' };
 			shortenService.update.mockResolvedValue(result);
 
 			const resp = await shortenController.update(id, { url });

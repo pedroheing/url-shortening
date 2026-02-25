@@ -85,10 +85,9 @@ export class ShortenService {
 
 	private buildResponse(record: short_urls): ShortenResponseDto {
 		return {
-			short_url_id: record.short_url_id,
 			url: record.url,
-			short_code: record.short_code,
-			short_url: this.buildShortUrl(record.short_code),
+			shortCode: record.short_code,
+			shortUrl: this.buildShortUrl(record.short_code),
 		};
 	}
 
