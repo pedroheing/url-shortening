@@ -53,7 +53,7 @@ describe('RedirectService', () => {
 
 		it('should return URL from DB, populate cache and skip TTL refresh on cache miss', async () => {
 			shortenCacheService.get.mockResolvedValue(null);
-			shortenService.findByShortCode.mockResolvedValue({ short_url_id: 1, short_code: shortCode, url: originalUrl } as any);
+			shortenService.findByShortCode.mockResolvedValue({ shortUrlId: 1, shortCode, url: originalUrl, shortUrl: '' });
 			clicksQueueService.add.mockResolvedValue(undefined);
 
 			const result = await redirectService.resolveAcess(shortCode, ip, userAgent);

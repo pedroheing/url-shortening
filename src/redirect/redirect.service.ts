@@ -45,7 +45,7 @@ export class RedirectService {
 			return null;
 		}
 		const shortUrlCache: ShortUrlCache = {
-			shortUrlId: shortUrl.short_url_id,
+			shortUrlId: shortUrl.shortUrlId,
 			url: shortUrl.url,
 		};
 		await this.shortenCacheService.set(shortCode, shortUrlCache);

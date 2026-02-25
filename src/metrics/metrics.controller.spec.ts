@@ -11,7 +11,7 @@ describe('MetricsController', () => {
 	const resolveShortUrlPipe = mock<ResolveShortUrlPipe>();
 	const shortenService = mock<ShortenService>();
 
-	const shortUrl = { short_code: '', short_url_id: 1, url: '' };
+	const shortUrl = { shortUrlId: 1, shortCode: '', url: '', shortUrl: '' };
 
 	beforeEach(async () => {
 		const module = await Test.createTestingModule({
@@ -36,7 +36,7 @@ describe('MetricsController', () => {
 
 			const metricsSummary = await metricsController.getMetricsSummary(shortUrl);
 
-			expect(metricsService.getMetricsSummary).toHaveBeenCalledWith(shortUrl.short_url_id);
+			expect(metricsService.getMetricsSummary).toHaveBeenCalledWith(shortUrl.shortUrlId);
 			expect(metricsSummary).toBe(result);
 		});
 	});
@@ -48,7 +48,7 @@ describe('MetricsController', () => {
 
 			const metricsSummary = await metricsController.getCityMetrics(shortUrl);
 
-			expect(metricsService.getCityMetrics).toHaveBeenCalledWith(shortUrl.short_url_id);
+			expect(metricsService.getCityMetrics).toHaveBeenCalledWith(shortUrl.shortUrlId);
 			expect(metricsSummary).toBe(result);
 		});
 	});
@@ -60,7 +60,7 @@ describe('MetricsController', () => {
 
 			const metricsSummary = await metricsController.getCountryMetrics(shortUrl);
 
-			expect(metricsService.getCountryMetrics).toHaveBeenCalledWith(shortUrl.short_url_id);
+			expect(metricsService.getCountryMetrics).toHaveBeenCalledWith(shortUrl.shortUrlId);
 			expect(metricsSummary).toBe(result);
 		});
 	});
@@ -72,7 +72,7 @@ describe('MetricsController', () => {
 
 			const metricsSummary = await metricsController.getDeviceMetrics(shortUrl);
 
-			expect(metricsService.getDeviceModelMetrics).toHaveBeenCalledWith(shortUrl.short_url_id);
+			expect(metricsService.getDeviceModelMetrics).toHaveBeenCalledWith(shortUrl.shortUrlId);
 			expect(metricsSummary).toBe(result);
 		});
 	});
@@ -84,7 +84,7 @@ describe('MetricsController', () => {
 
 			const metricsSummary = await metricsController.getVendorsMetrics(shortUrl);
 
-			expect(metricsService.getDeviceVendorMetrics).toHaveBeenCalledWith(shortUrl.short_url_id);
+			expect(metricsService.getDeviceVendorMetrics).toHaveBeenCalledWith(shortUrl.shortUrlId);
 			expect(metricsSummary).toBe(result);
 		});
 	});
@@ -96,7 +96,7 @@ describe('MetricsController', () => {
 
 			const metricsSummary = await metricsController.getBrowserMetrics(shortUrl);
 
-			expect(metricsService.getBrowserMetrics).toHaveBeenCalledWith(shortUrl.short_url_id);
+			expect(metricsService.getBrowserMetrics).toHaveBeenCalledWith(shortUrl.shortUrlId);
 			expect(metricsSummary).toBe(result);
 		});
 	});
@@ -108,7 +108,7 @@ describe('MetricsController', () => {
 
 			const metricsSummary = await metricsController.getOsMetrics(shortUrl);
 
-			expect(metricsService.getOsMetrics).toHaveBeenCalledWith(shortUrl.short_url_id);
+			expect(metricsService.getOsMetrics).toHaveBeenCalledWith(shortUrl.shortUrlId);
 			expect(metricsSummary).toBe(result);
 		});
 	});
@@ -120,7 +120,7 @@ describe('MetricsController', () => {
 
 			const metricsSummary = await metricsController.getClicksMetrics(shortUrl);
 
-			expect(metricsService.getClicksMetrics).toHaveBeenCalledWith(shortUrl.short_url_id);
+			expect(metricsService.getClicksMetrics).toHaveBeenCalledWith(shortUrl.shortUrlId);
 			expect(metricsSummary).toBe(result);
 		});
 	});

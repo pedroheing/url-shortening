@@ -35,80 +35,78 @@ describe('ShortenController', () => {
 		it('should create a short URL and return it', async () => {
 			const url = 'https://example.com.br';
 			const shortenUrlResult = {
+				shortUrlId: 1,
 				url: 'https://test.com.br',
 				shortCode: '123456',
-				shortUrlId: 1,
-				shortUrl: 'https://short.com.br/1234',
+				shortUrl: 'https://short.com.br/123456',
 			};
 			shortenService.shorten.mockResolvedValue(shortenUrlResult);
 
 			const resp = await shortenController.shorten({ url });
 
 			expect(shortenService.shorten).toHaveBeenCalledWith(url);
-			expect(resp).toMatchObject(shortenUrlResult);
+			expect(resp).toMatchObject({ url: shortenUrlResult.url, shortCode: shortenUrlResult.shortCode });
 		});
 	});
 
 	describe('find', () => {
-		it('should return the shorten URL data', async () => {
-			const id = 1;
+		it('should return the shortened URL data', async () => {
+			const shortCode = 'abc123';
 			const shortenUrlResult = {
-				url: 'https://test.com.br',
-				shortCode: '123456',
 				shortUrlId: 1,
-				shortUrl: 'https://short.com.br/1234',
-				access_count: 0,
+				url: 'https://test.com.br',
+				shortCode,
+				shortUrl: 'https://short.co/abc123',
 			};
-			shortenService.find.mockResolvedValue(shortenUrlResult);
+			shortenService.findByShortCode.mockResolvedValue(shortenUrlResult);
 
-			const shortenUrl = await shortenController.find(id);
+			const result = await shortenController.find(shortCode);
 
-			expect(shortenUrl).toMatchObject(shortenUrlResult);
-			expect(shortenService.find).toHaveBeenCalledWith(id);
+			expect(result).toMatchObject({ url: shortenUrlResult.url, shortCode });
+			expect(shortenService.findByShortCode).toHaveBeenCalledWith(shortCode);
 		});
 
-		it('should throw NotFoundException when it does not find the shorten URL', async () => {
-			shortenService.find.mockResolvedValue(null);
-			await expect(async () => {
-				await shortenController.find(1);
-			}).rejects.toThrow(NotFoundException);
+		it('should throw NotFoundException when not found', async () => {
+			shortenService.findByShortCode.mockResolvedValue(null);
+
+			await expect(shortenController.find('abc123')).rejects.toThrow(NotFoundException);
 		});
 	});
 
 	describe('update', () => {
 		it('should update the short URL and return it', async () => {
-			const id = 1;
+			const shortCode = 'abc123';
 			const url = 'https://new.example.com';
-			const result = { shortUrlId: id, url, shortCode: 'abc123', shortUrl: 'https://short.co/abc123' };
-			shortenService.update.mockResolvedValue(result);
+			const result = { shortUrlId: 1, url, shortCode, shortUrl: 'https://short.co/abc123' };
+			shortenService.updateByShortCode.mockResolvedValue(result);
 
-			const resp = await shortenController.update(id, { url });
+			const resp = await shortenController.update(shortCode, { url });
 
-			expect(shortenService.update).toHaveBeenCalledWith(id, url);
-			expect(resp).toMatchObject(result);
+			expect(shortenService.updateByShortCode).toHaveBeenCalledWith(shortCode, url);
+			expect(resp).toMatchObject({ url, shortCode });
 		});
 
 		it('should throw NotFoundException on P2025 error', async () => {
-			shortenService.update.mockRejectedValue(p2025Error);
+			shortenService.updateByShortCode.mockRejectedValue(p2025Error);
 
-			await expect(shortenController.update(1, { url: 'https://example.com' })).rejects.toThrow(NotFoundException);
+			await expect(shortenController.update('abc123', { url: 'https://example.com' })).rejects.toThrow(NotFoundException);
 		});
 	});
 
 	describe('delete', () => {
 		it('should delete the short URL', async () => {
-			const id = 1;
-			shortenService.delete.mockResolvedValue({} as any);
+			const shortCode = 'abc123';
+			shortenService.deleteByShortCode.mockResolvedValue({} as any);
 
-			await shortenController.delete(id);
+			await shortenController.delete(shortCode);
 
-			expect(shortenService.delete).toHaveBeenCalledWith(id);
+			expect(shortenService.deleteByShortCode).toHaveBeenCalledWith(shortCode);
 		});
 
 		it('should throw NotFoundException on P2025 error', async () => {
-			shortenService.delete.mockRejectedValue(p2025Error);
+			shortenService.deleteByShortCode.mockRejectedValue(p2025Error);
 
-			await expect(shortenController.delete(1)).rejects.toThrow(NotFoundException);
+			await expect(shortenController.delete('abc123')).rejects.toThrow(NotFoundException);
 		});
 	});
 });
