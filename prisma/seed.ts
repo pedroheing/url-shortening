@@ -1,4 +1,4 @@
-import { fakerPT_BR as faker } from '@faker-js/faker';
+import { fakerEN as faker } from '@faker-js/faker';
 import { PrismaPg } from '@prisma/adapter-pg';
 import 'dotenv/config';
 import { PrismaClient, clicks, short_urls } from 'generated/prisma/client';
