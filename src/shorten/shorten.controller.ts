@@ -1,9 +1,10 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Patch, Post } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Prisma } from 'generated/prisma/client';
 import { ShortenResponseDto } from './dto/shorten-response.dto';
 import { ShortenDto } from './dto/shorten.dto';
 import { UpdateOriginalUrlDto } from './dto/update-original-url.dto';
+import { ShortenUrl } from './shorten.entity';
 import { ShortenService } from './shorten.service';
 
 @ApiTags('Shorten')
@@ -23,13 +24,13 @@ export class ShortenController {
 		status: HttpStatus.BAD_REQUEST,
 		description: 'Invalid request body. The "url" field is required and must be a string.',
 	})
-	public async shorten(@Body() dto: ShortenDto) {
-		return await this.shortenService.shorten(dto.url);
+	public async shorten(@Body() dto: ShortenDto): Promise<ShortenResponseDto> {
+		return this.mapToDto(await this.shortenService.shorten(dto.url));
 	}
 
-	@Get(':id')
-	@ApiOperation({ summary: 'Get a shortened URL by ID' })
-	@ApiParam({ name: 'id', type: Number, description: 'The numeric ID of the shortened URL', example: 1 })
+	@Get(':shortCode')
+	@ApiOperation({ summary: 'Get a shortened URL by short code' })
+	@ApiParam({ name: 'shortCode', description: 'The short code that identifies the URL', example: 'aB3xZ9' })
 	@ApiResponse({
 		status: HttpStatus.OK,
 		description: 'The shortened URL record.',
@@ -37,23 +38,19 @@ export class ShortenController {
 	})
 	@ApiResponse({
 		status: HttpStatus.NOT_FOUND,
-		description: 'No shortened URL found with the given ID.',
+		description: 'No shortened URL found with the given short code.',
 	})
-	@ApiResponse({
-		status: HttpStatus.BAD_REQUEST,
-		description: 'The ID must be a valid integer.',
-	})
-	public async find(@Param('id', ParseIntPipe) id: number) {
-		const shortenUrl = await this.shortenService.find(id);
+	public async find(@Param('shortCode') shortCode: string): Promise<ShortenResponseDto> {
+		const shortenUrl = await this.shortenService.findByShortCode(shortCode);
 		if (!shortenUrl) {
 			throw new NotFoundException();
 		}
-		return shortenUrl;
+		return this.mapToDto(shortenUrl);
 	}
 
-	@Patch(':id')
+	@Patch(':shortCode')
 	@ApiOperation({ summary: 'Update the original URL of a shortened link' })
-	@ApiParam({ name: 'id', type: Number, description: 'The numeric ID of the shortened URL', example: 1 })
+	@ApiParam({ name: 'shortCode', description: 'The short code that identifies the URL', example: 'aB3xZ9' })
 	@ApiBody({ type: UpdateOriginalUrlDto })
 	@ApiResponse({
 		status: HttpStatus.OK,
@@ -62,15 +59,15 @@ export class ShortenController {
 	})
 	@ApiResponse({
 		status: HttpStatus.NOT_FOUND,
-		description: 'No shortened URL found with the given ID.',
+		description: 'No shortened URL found with the given short code.',
 	})
 	@ApiResponse({
 		status: HttpStatus.BAD_REQUEST,
-		description: 'Invalid request body or ID.',
+		description: 'Invalid request body.',
 	})
-	public async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateOriginalUrlDto) {
+	public async update(@Param('shortCode') shortCode: string, @Body() dto: UpdateOriginalUrlDto): Promise<ShortenResponseDto> {
 		try {
-			return await this.shortenService.update(id, dto.url);
+			return this.mapToDto(await this.shortenService.updateByShortCode(shortCode, dto.url));
 		} catch (error) {
 			if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
 				throw new NotFoundException();
@@ -79,30 +76,34 @@ export class ShortenController {
 		}
 	}
 
-	@Delete(':id')
+	@Delete(':shortCode')
 	@HttpCode(HttpStatus.NO_CONTENT)
 	@ApiOperation({ summary: 'Delete a shortened URL' })
-	@ApiParam({ name: 'id', type: Number, description: 'The numeric ID of the shortened URL', example: 1 })
+	@ApiParam({ name: 'shortCode', description: 'The short code that identifies the URL', example: 'aB3xZ9' })
 	@ApiResponse({
 		status: HttpStatus.NO_CONTENT,
 		description: 'The shortened URL was successfully deleted.',
 	})
 	@ApiResponse({
 		status: HttpStatus.NOT_FOUND,
-		description: 'No shortened URL found with the given ID.',
+		description: 'No shortened URL found with the given short code.',
 	})
-	@ApiResponse({
-		status: HttpStatus.BAD_REQUEST,
-		description: 'The ID must be a valid integer.',
-	})
-	public async delete(@Param('id', ParseIntPipe) id: number) {
+	public async delete(@Param('shortCode') shortCode: string): Promise<void> {
 		try {
-			await this.shortenService.delete(id);
+			await this.shortenService.deleteByShortCode(shortCode);
 		} catch (error) {
 			if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
 				throw new NotFoundException();
 			}
 			throw error;
 		}
+	}
+
+	private mapToDto(shortenUrl: ShortenUrl): ShortenResponseDto {
+		return {
+			url: shortenUrl.url,
+			shortCode: shortenUrl.shortCode,
+			shortUrl: shortenUrl.shortUrl,
+		};
 	}
 }

@@ -40,9 +40,10 @@ describe('ShortenService', () => {
 	});
 
 	describe('shorten', () => {
-		it('should save the URL with the encoded short code, cache it and return ShortenResponse', async () => {
+		it('should save the URL with the encoded short code, cache it and return ShortenUrl', async () => {
+			const id = 1;
 			const url = 'https://example.com';
-			const record = { id: 1, url, short_code: SHORT_CODE, access_count: 0 };
+			const record = { short_url_id: id, url, short_code: SHORT_CODE };
 
 			sequenceService.getNextValue.mockResolvedValue(BigInt(1));
 			encondingService.encondeBase62.mockReturnValue(SHORT_CODE);
@@ -50,11 +51,19 @@ describe('ShortenService', () => {
 
 			const result = await shortenService.shorten(url);
 
-			expect(result).toEqual({ ...record, short_url: SHORT_URL });
+			expect(result).toEqual({
+				shortUrlId: id,
+				url: record.url,
+				shortCode: record.short_code,
+				shortUrl: SHORT_URL,
+			});
 			expect(prismaService.short_urls.create).toHaveBeenCalledWith({
 				data: { short_code: SHORT_CODE, url },
 			});
-			expect(shortenCacheService.set).toHaveBeenCalledWith(SHORT_CODE, url);
+			expect(shortenCacheService.set).toHaveBeenCalledWith(SHORT_CODE, {
+				shortUrlId: id,
+				url,
+			});
 		});
 
 		it('should propagate error if sequence service fails', async () => {
@@ -64,37 +73,78 @@ describe('ShortenService', () => {
 		});
 	});
 
-	describe('update', () => {
-		it('should update the URL in DB, update cache and return ShortenResponse', async () => {
+	describe('findByShortCode', () => {
+		it('should return ShortenUrl when found', async () => {
 			const id = 1;
-			const url = 'https://new.example.com';
-			const record = { id, url, short_code: SHORT_CODE, access_count: 0 };
+			const url = 'https://example.com';
+			const record = { short_url_id: id, url, short_code: SHORT_CODE };
 
-			prismaService.short_urls.update.mockResolvedValue(record);
+			prismaService.short_urls.findUnique.mockResolvedValue(record);
 
-			const result = await shortenService.update(id, url);
+			const result = await shortenService.findByShortCode(SHORT_CODE);
 
-			expect(result).toEqual({ ...record, short_url: SHORT_URL });
-			expect(prismaService.short_urls.update).toHaveBeenCalledWith({
-				where: { id },
-				data: { url },
+			expect(result).toEqual({
+				shortUrlId: id,
+				url,
+				shortCode: SHORT_CODE,
+				shortUrl: SHORT_URL,
 			});
-			expect(shortenCacheService.set).toHaveBeenCalledWith(SHORT_CODE, url);
+			expect(prismaService.short_urls.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { short_code: SHORT_CODE } }));
+		});
+
+		it('should return null when not found', async () => {
+			prismaService.short_urls.findUnique.mockResolvedValue(null);
+
+			const result = await shortenService.findByShortCode(SHORT_CODE);
+
+			expect(result).toBeNull();
 		});
 	});
 
-	describe('delete', () => {
-		it('should delete the record, invalidate cache and return ShortenResponse', async () => {
+	describe('updateByShortCode', () => {
+		it('should update the URL in DB, update cache and return ShortenUrl', async () => {
+			const id = 1;
+			const url = 'https://new.example.com';
+			const record = { short_url_id: id, url, short_code: SHORT_CODE };
+
+			prismaService.short_urls.update.mockResolvedValue(record);
+
+			const result = await shortenService.updateByShortCode(SHORT_CODE, url);
+
+			expect(result).toEqual({
+				shortUrlId: id,
+				url: record.url,
+				shortCode: record.short_code,
+				shortUrl: SHORT_URL,
+			});
+			expect(prismaService.short_urls.update).toHaveBeenCalledWith({
+				where: { short_code: SHORT_CODE },
+				data: { url },
+			});
+			expect(shortenCacheService.set).toHaveBeenCalledWith(SHORT_CODE, {
+				shortUrlId: id,
+				url,
+			});
+		});
+	});
+
+	describe('deleteByShortCode', () => {
+		it('should delete the record, invalidate cache and return ShortenUrl', async () => {
 			const id = 1;
 			const url = 'https://example.com';
-			const record = { id, url, short_code: SHORT_CODE, access_count: 0 };
+			const record = { short_url_id: id, url, short_code: SHORT_CODE };
 
 			prismaService.short_urls.delete.mockResolvedValue(record);
 
-			const result = await shortenService.delete(id);
+			const result = await shortenService.deleteByShortCode(SHORT_CODE);
 
-			expect(result).toEqual({ ...record, short_url: SHORT_URL });
-			expect(prismaService.short_urls.delete).toHaveBeenCalledWith({ where: { id } });
+			expect(result).toEqual({
+				shortUrlId: id,
+				url: record.url,
+				shortCode: record.short_code,
+				shortUrl: SHORT_URL,
+			});
+			expect(prismaService.short_urls.delete).toHaveBeenCalledWith({ where: { short_code: SHORT_CODE } });
 			expect(shortenCacheService.invalidate).toHaveBeenCalledWith(SHORT_CODE);
 		});
 	});

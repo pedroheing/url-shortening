@@ -2,10 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { short_urls } from 'generated/prisma/client';
 import { EncondingService } from 'src/core/enconding/enconding.service';
 import { PrismaService } from 'src/core/prisma/prisma.service';
-import { ShortenResponseDto } from './dto/shorten-response.dto';
 import { SequenceService } from './services/sequence.service';
 import { ShortenCacheService } from './services/shorten-cache.service';
 import { ShortenConfigService } from './services/shorten-config.service';
+import { ShortenUrl } from './shorten.entity';
 
 @Injectable()
 export class ShortenService {
@@ -17,7 +17,7 @@ export class ShortenService {
 		private readonly shortenCacheService: ShortenCacheService,
 	) {}
 
-	public async shorten(url: string): Promise<ShortenResponseDto> {
+	public async shorten(url: string): Promise<ShortenUrl> {
 		const shortCode = await this.getNextShortCode();
 		const record = await this.prismaService.short_urls.create({
 			data: {
@@ -25,7 +25,10 @@ export class ShortenService {
 				url: url,
 			},
 		});
-		await this.shortenCacheService.set(shortCode, url);
+		await this.shortenCacheService.set(shortCode, {
+			shortUrlId: record.short_url_id,
+			url: record.url,
+		});
 		return this.buildResponse(record);
 	}
 
@@ -36,54 +39,48 @@ export class ShortenService {
 		return this.encondingService.encondeBase62(nextValue.toString());
 	}
 
-	public async find(id: number): Promise<ShortenResponseDto | null> {
+	public async findByShortCode(shortCode: string): Promise<ShortenUrl | null> {
 		const record = await this.prismaService.short_urls.findUnique({
 			where: {
-				id: id,
+				short_code: shortCode,
 			},
 		});
 		if (!record) return null;
 		return this.buildResponse(record);
 	}
 
-	public async findByShortCode(shortCode: string): Promise<short_urls | null> {
-		return await this.prismaService.short_urls.findUnique({
-			where: {
-				short_code: shortCode,
-			},
-		});
-	}
-
-	public async update(id: number, url: string): Promise<ShortenResponseDto> {
+	public async updateByShortCode(shortCode: string, url: string): Promise<ShortenUrl> {
 		const record = await this.prismaService.short_urls.update({
 			where: {
-				id: id,
+				short_code: shortCode,
 			},
 			data: {
 				url: url,
 			},
 		});
-		await this.shortenCacheService.set(record.short_code, url);
+		await this.shortenCacheService.set(shortCode, {
+			url: url,
+			shortUrlId: record.short_url_id,
+		});
 		return this.buildResponse(record);
 	}
 
-	public async delete(id: number): Promise<ShortenResponseDto> {
+	public async deleteByShortCode(shortCode: string): Promise<ShortenUrl> {
 		const record = await this.prismaService.short_urls.delete({
 			where: {
-				id: id,
+				short_code: shortCode,
 			},
 		});
-		await this.shortenCacheService.invalidate(record.short_code);
+		await this.shortenCacheService.invalidate(shortCode);
 		return this.buildResponse(record);
 	}
 
-	private buildResponse(record: short_urls): ShortenResponseDto {
+	private buildResponse(record: short_urls): ShortenUrl {
 		return {
-			id: record.id,
+			shortUrlId: record.short_url_id,
+			shortCode: record.short_code,
 			url: record.url,
-			short_code: record.short_code,
-			short_url: this.buildShortUrl(record.short_code),
-			access_count: record.access_count,
+			shortUrl: this.buildShortUrl(record.short_code),
 		};
 	}
 

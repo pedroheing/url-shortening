@@ -7,8 +7,6 @@ export enum Environment {
 	Production = 'production',
 }
 
-export type ConfigClass<V> = new (config: V) => any;
-
 function validateEnv<T extends object>(cls: ClassConstructor<T>): T {
 	const env = plainToClass(cls, process.env, {
 		enableImplicitConversion: true,

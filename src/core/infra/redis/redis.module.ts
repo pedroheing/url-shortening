@@ -4,7 +4,7 @@ import { RedisConfigService, RedisEnv } from './redis-config.service';
 import { RedisService } from './redis.service';
 
 @Module({
-	providers: [RedisService, createEnvProvider(RedisEnv), RedisConfigService],
+	providers: [createEnvProvider(RedisEnv), RedisConfigService, RedisService],
 	exports: [RedisService],
 })
 export class RedisModule {}

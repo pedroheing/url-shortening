@@ -1,5 +1,6 @@
-import { Controller, Get, HttpRedirectResponse, HttpStatus, NotFoundException, Param, Redirect } from '@nestjs/common';
+import { Controller, Get, HttpRedirectResponse, HttpStatus, Ip, NotFoundException, Param, Redirect } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UserAgent, UserAgentResult } from 'src/common/decorators/user-agent.decorator';
 import { OriginalUrlNotFoundException } from './error/original-url-not-found.error';
 import { RedirectService } from './redirect.service';
 
@@ -25,9 +26,9 @@ export class RedirectController {
 		status: HttpStatus.NOT_FOUND,
 		description: 'No URL found for the given short code.',
 	})
-	public async redirect(@Param('shortCode') shortCode: string): Promise<HttpRedirectResponse> {
+	public async redirect(@Param('shortCode') shortCode: string, @Ip() ip: string, @UserAgent() userAgent: UserAgentResult): Promise<HttpRedirectResponse> {
 		try {
-			const url = await this.redirectService.getOrignalUrl(shortCode);
+			const url = await this.redirectService.resolveAcess(shortCode, ip, userAgent);
 			return { url, statusCode: HttpStatus.FOUND };
 		} catch (error) {
 			if (error instanceof OriginalUrlNotFoundException) {
