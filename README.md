@@ -1,98 +1,262 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# URL Shortening Service
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+![NestJS](https://img.shields.io/badge/nestjs-%23E0234E.svg?style=flat&logo=nestjs&logoColor=white)
+![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=flat&logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/redis-%23DD0031.svg?style=flat&logo=redis&logoColor=white)
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)
+[![Prisma](https://img.shields.io/badge/Prisma-2D3748?logo=prisma&logoColor=white)](#)
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+A URL shortening service built with NestJS, featuring a cache-first redirect strategy with Redis, asynchronous click processing via a background worker, and per-click metrics covering geographic and device data.
 
-## Description
+## Table of Contents
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- [Architecture and Features](#architecture-and-features)
+    - [URL Shortening with Base62 Encoding](#url-shortening-with-base62-encoding)
+    - [Cache-First Redirect Strategy](#cache-first-redirect-strategy)
+    - [Asynchronous Click Processing](#asynchronous-click-processing)
+- [Design Decisions and Trade-offs](#design-decisions-and-trade-offs)
+    - [Database Sequences for Unique Short Codes](#database-sequences-for-unique-short-codes)
+    - [Redis Queue for Click Ingestion](#redis-queue-for-click-ingestion)
+    - [Cache-First vs. Database-First Redirect](#cache-first-vs-database-first-redirect)
+- [Future Improvements](#future-improvements)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Installation](#installation)
+    - [Configuration](#configuration)
+    - [Execution](#execution)
+- [Access Points](#access-points)
+- [API Documentation](#api-documentation)
+    - [Core Endpoints](#core-endpoints)
+- [Run Tests](#run-tests)
 
-## Project setup
+## Architecture and Features
 
-```bash
-$ pnpm install
+### URL Shortening with Base62 Encoding
+
+Short codes are generated from a PostgreSQL sequence and Base62-encoded, producing a compact, URL-safe identifier with no collision checks needed.
+
+<details>
+  <summary>Click to view the URL Shortening Sequence Diagram</summary>
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Client
+  participant API
+  participant DB as PostgreSQL
+  participant Cache as Redis
+
+  Client->>API: POST /api/v1/shorten { url }
+
+  API->>DB: Fetch next value from sequence
+  DB-->>API: Sequence number (e.g. 12345)
+
+  API->>API: Base62 encode sequence number → short code
+
+  API->>DB: INSERT short_url (url, short_code)
+  DB-->>API: Saved record
+
+  API->>Cache: Cache short_code → url (with TTL)
+
+  API-->>Client: 201 Created { shortCode, shortUrl, url }
 ```
 
-## Compile and run the project
+</details>
 
-```bash
-# development
-$ pnpm run start
+### Cache-First Redirect Strategy
 
-# watch mode
-$ pnpm run start:dev
+Redirect lookups always check Redis first. On a cache miss, the system falls back to PostgreSQL and re-hydrates the cache.
 
-# production mode
-$ pnpm run start:prod
+<details>
+  <summary>Click to view the Redirect Flow Diagram</summary>
+
+```mermaid
+flowchart TD
+  A[GET /:shortCode] --> B[Lookup in Redis Cache]
+
+  B --> C{Cache Hit?}
+
+  C -- Yes --> E[Capture click metadata]
+  C -- No --> D[Lookup in PostgreSQL]
+
+  D --> F{Found in DB?}
+  F -- No --> G[404 Not Found]
+  F -- Yes --> H[Hydrate Redis Cache]
+  H --> E
+
+  E --> I[Enqueue click event to Redis]
+  I --> J[302 Redirect to original URL]
 ```
 
-## Run tests
+</details>
 
-```bash
-# unit tests
-$ pnpm run test
+### Asynchronous Click Processing
 
-# e2e tests
-$ pnpm run test:e2e
+Every redirect enqueues a click event to Redis instead of writing directly to the database. A scheduled worker polls the queue every second, batches up to 100 events, and bulk-inserts them into PostgreSQL.
 
-# test coverage
-$ pnpm run test:cov
+<details>
+  <summary>Click to view the Click Processing Diagram</summary>
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Client
+  participant API
+  participant Queue as Redis (Queue)
+  participant Worker as Clicks Worker
+  participant DB as PostgreSQL
+
+  Client->>API: GET /:shortCode
+
+  API->>Queue: RPUSH click event (IP, UA, geo, device...)
+  API-->>Client: 302 Redirect
+
+  Note over Worker: Runs every 1 second
+
+  Worker->>Queue: LPOP up to 100 events
+  Queue-->>Worker: Batch of click events
+
+  Worker->>DB: Bulk INSERT into clicks table
+  DB-->>Worker: OK
 ```
 
-## Deployment
+</details>
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## Design Decisions and Trade-offs
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Database Sequences for Unique Short Codes
+
+**Decision:** Short codes are generated by Base62-encoding a PostgreSQL sequence value, rather than using random strings or hashes.
+
+- **Rationale:** Sequences guarantee uniqueness at the database level with no need for collision detection or retry loops. Combined with Base62 encoding, the result is a compact, URL-safe string.
+- **Trade-off:** Short codes are predictable. A sequential pattern is observable by anyone who creates multiple URLs. This is a reasonable trade-off for a URL shortener but would not be acceptable in contexts where opaque IDs are a security requirement.
+
+### Redis Queue for Click Ingestion
+
+**Decision:** Click events are pushed to a Redis list on every redirect and consumed asynchronously by a scheduled worker, rather than being written synchronously to PostgreSQL.
+
+- **Rationale:** Database writes are expensive under high redirect throughput. Offloading them to an async worker keeps redirect latency low and allows bulk-insert optimizations.
+- **Trade-off:** Clicks are not immediately visible in the analytics endpoints. There is a delay between a click being enqueued and it being persisted, which grows with queue depth. Queued events survive application restarts since they live in Redis, but are lost if Redis itself restarts without persistence enabled.
+
+### Cache-First vs. Database-First Redirect
+
+**Decision:** The redirect endpoint resolves short codes from Redis and only falls back to PostgreSQL on a cache miss.
+
+- **Rationale:** For a URL shortener, read traffic (redirects) vastly outnumbers write traffic (URL creation). Serving the common case entirely from Redis reduces database load and keeps redirect latency consistently low.
+- **Trade-off:** Redis is a hard dependency with no fallback. If it goes down, redirects fail completely.
+
+## Future Improvements
+
+- **Rate Limiting:**
+  Implement per-IP or per-user rate limiting on the shorten endpoint to prevent abuse.
+
+- **Custom Short Codes:**
+  Allow users to specify a custom alias instead of receiving an auto-generated short code.
+
+- **Redis Fault Tolerance:**
+  Wrap Redis calls in the redirect path with error handling so that a Redis outage degrades gracefully, falling back to direct database reads and skipping click recording, instead of causing complete service failure.
+
+## Tech Stack
+
+- **Runtime:** Node.js (v22)
+- **Framework:** NestJS
+- **Database:** PostgreSQL 17
+- **ORM:** Prisma
+- **Cache / Queue:** Redis 8
+- **Infrastructure:** Docker and Docker Compose
+
+## Getting Started
+
+### Prerequisites
+
+- Docker Engine
+- Docker Compose
+
+### Installation
+
+Clone the repository:
 
 ```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+git clone https://github.com/pedroheing/url-shortening.git && cd url-shortening
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Configuration
 
-## Resources
+The application is pre-configured for the Docker environment.
 
-Check out a few resources that may come in handy when working with NestJS:
+To change the configuration, edit the `docker-compose.yml` file.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+Default variables:
 
-## Support
+| Variable                      | Description                               | Default                                                                   |
+| ----------------------------- | ----------------------------------------- | ------------------------------------------------------------------------- |
+| `PORT`                        | Port the API listens on                   | `3000`                                                                    |
+| `DATABASE_URL`                | PostgreSQL connection string              | `postgresql://admin:password@localhost:5432/url-shortening?schema=public` |
+| `REDIS_HOST`                  | Redis host                                | `redis`                                                                   |
+| `REDIS_PORT`                  | Redis port                                | `6379`                                                                    |
+| `SHORT_URL_BASE`              | Base URL prepended to short codes         | `http://localhost:3000`                                                   |
+| `SHORT_URL_CACHE_TTL_SECONDS` | Redis TTL for cached short URLs (seconds) | `300`                                                                     |
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Execution
 
-## Stay in touch
+The project is fully containerized. To start the application and all dependent services, run:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```bash
+docker compose up -d --build
+```
 
-## License
+On startup, it will:
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+1. Build the API and migration containers.
+2. Wait for PostgreSQL and Redis to be healthy.
+3. Run database migrations.
+4. Seed the database with initial data (10 short URLs with 100 clicks each).
+5. Start the API server.
+
+## Access Points
+
+| Service           | URL                              | Credentials / Notes                                 |
+| ----------------- | -------------------------------- | --------------------------------------------------- |
+| **API**           | `http://localhost:3000`          | -                                                   |
+| **Swagger UI**    | `http://localhost:3000/api/docs` | -                                                   |
+| **pgAdmin**       | `http://localhost:5050`          | User: `admin@admin.com` / Pass: `root`              |
+| **Postgres**      | `localhost:5432`                 | User: `admin` / Pass: `password` / Host: `postgres` |
+| **Redis Insight** | `http://localhost:5540`          | -                                                   |
+
+## API Documentation
+
+Full API documentation is available via Swagger.
+
+1. Start the application.
+2. Navigate to `http://localhost:3000/api/docs`.
+
+### Core Endpoints
+
+**Shorten**
+
+- `POST /api/v1/shorten` - Create a new shortened URL.
+- `GET /api/v1/shorten/:shortCode` - Retrieve details for a short URL.
+- `PATCH /api/v1/shorten/:shortCode` - Update the original URL of a short link.
+- `DELETE /api/v1/shorten/:shortCode` - Delete a shortened URL.
+
+**Redirect**
+
+- `GET /:shortCode` - Redirect to the original URL and record click analytics.
+
+**Metrics**
+
+- `GET /api/v1/metrics/:shortCode` - Full analytics summary.
+- `GET /api/v1/metrics/:shortCode/clicks` - Total click count.
+- `GET /api/v1/metrics/:shortCode/countries` - Clicks grouped by country.
+- `GET /api/v1/metrics/:shortCode/cities` - Clicks grouped by city.
+- `GET /api/v1/metrics/:shortCode/browsers` - Clicks grouped by browser.
+- `GET /api/v1/metrics/:shortCode/os` - Clicks grouped by operating system.
+- `GET /api/v1/metrics/:shortCode/device-vendors` - Clicks grouped by device vendor.
+- `GET /api/v1/metrics/:shortCode/device-models` - Clicks grouped by device model.
+
+## Run Tests
+
+```bash
+docker compose exec url-shortening pnpm run test
+```
