@@ -33,7 +33,7 @@ export class ShortenService {
 	}
 
 	// to create the short code, we use a unique number converted to base62
-	// it is used base62 instead of base64 due to the latter having unsafe URL characters
+	// base62 is used instead of base64 because the latter contains unsafe URL characters
 	private async getNextShortCode(): Promise<string> {
 		const nextValue = await this.sequenceService.getNextValue();
 		return this.encondingService.encondeBase62(nextValue.toString());
