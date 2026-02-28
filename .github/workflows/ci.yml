@@ -39,6 +39,8 @@ jobs:
                   cache: 'pnpm'
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
+            - name: Generate Prisma client
+              run: pnpm prisma generate
             - name: Lint
               run: pnpm run lint:check
     build:
@@ -57,6 +59,8 @@ jobs:
                   cache: 'pnpm'
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
+            - name: Generate Prisma client
+              run: pnpm prisma generate
             - name: Build
               run: pnpm run build
     test:
@@ -75,5 +79,7 @@ jobs:
                   cache: 'pnpm'
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
+            - name: Generate Prisma client
+              run: pnpm prisma generate
             - name: Test
               run: pnpm run test
