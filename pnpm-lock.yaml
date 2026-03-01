@@ -35,9 +35,6 @@ importers:
       '@supercharge/request-ip':
         specifier: ^1.2.0
         version: 1.2.0
-      base62:
-        specifier: ^2.0.2
-        version: 2.0.2
       base62str:
         specifier: ^1.0.10
         version: 1.0.10
@@ -1763,10 +1760,6 @@ packages:
     peerDependenciesMeta:
       bare-abort-controller:
         optional: true
-
-  base62@2.0.2:
-    resolution: {integrity: sha512-FLoAQzMpmdDBei0u7fUAQzVCxoH6g4pueCIuGDoCZVZCiCeW4qTKpEGB79jkS15VB8b/5EIHc4R+WSKTByM+dw==}
-    engines: {node: '>=6.0.0'}
 
   base62str@1.0.10:
     resolution: {integrity: sha512-q+sWEg8TXw1NN2LJ5TOg0IgnxERZ1/sVK48Y/TDxMfxaVjRmPcF6OO4MoL1xemEp7f7mJYDapAGSr+0lho5lJQ==}
@@ -6038,8 +6031,6 @@ snapshots:
   balanced-match@4.0.3: {}
 
   bare-events@2.8.2: {}
-
-  base62@2.0.2: {}
 
   base62str@1.0.10: {}
 
