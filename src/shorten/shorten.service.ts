@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { short_urls } from 'generated/prisma/client';
-import { EncondingService } from 'src/core/enconding/enconding.service';
+import { Base62 } from 'src/common/utils/base62';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import { SequenceService } from './services/sequence.service';
 import { ShortenCacheService } from './services/shorten-cache.service';
@@ -13,7 +13,6 @@ export class ShortenService {
 		private readonly prismaService: PrismaService,
 		private readonly sequenceService: SequenceService,
 		private readonly shortenConfigService: ShortenConfigService,
-		private readonly encondingService: EncondingService,
 		private readonly shortenCacheService: ShortenCacheService,
 	) {}
 
@@ -36,7 +35,7 @@ export class ShortenService {
 	// base62 is used instead of base64 because the latter contains unsafe URL characters
 	private async getNextShortCode(): Promise<string> {
 		const nextValue = await this.sequenceService.getNextValue();
-		return this.encondingService.encondeBase62(nextValue.toString());
+		return Base62.enconde(nextValue.toString());
 	}
 
 	public async findByShortCode(shortCode: string): Promise<ShortenUrl | null> {

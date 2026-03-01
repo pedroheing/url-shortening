@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { mock, mockDeep } from 'jest-mock-extended';
-import { EncondingService } from 'src/core/enconding/enconding.service';
+import { Base62 } from 'src/common/utils/base62';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import { SequenceService } from './services/sequence.service';
 import { ShortenCacheService } from './services/shorten-cache.service';
@@ -9,7 +9,8 @@ import { ShortenService } from './shorten.service';
 
 describe('ShortenService', () => {
 	const SHORT_URL_BASE = 'https://short.co';
-	const SHORT_CODE = 'abc123';
+	const SEQUENCE_VALUE = BigInt(1);
+	const SHORT_CODE = Base62.enconde(SEQUENCE_VALUE.toString());
 	const SHORT_URL = `${SHORT_URL_BASE}/${SHORT_CODE}`;
 
 	const sequenceService = mock<SequenceService>();
@@ -17,7 +18,6 @@ describe('ShortenService', () => {
 		shortUrlBase: SHORT_URL_BASE,
 	});
 	const prismaService = mockDeep<PrismaService>();
-	const encondingService = mock<EncondingService>();
 	const shortenCacheService = mock<ShortenCacheService>();
 	let shortenService: ShortenService;
 
@@ -28,7 +28,6 @@ describe('ShortenService', () => {
 				{ provide: PrismaService, useValue: prismaService },
 				{ provide: SequenceService, useValue: sequenceService },
 				{ provide: ShortenConfigService, useValue: shortenConfigService },
-				{ provide: EncondingService, useValue: encondingService },
 				{ provide: ShortenCacheService, useValue: shortenCacheService },
 			],
 		}).compile();
@@ -45,8 +44,7 @@ describe('ShortenService', () => {
 			const url = 'https://example.com';
 			const record = { short_url_id: id, url, short_code: SHORT_CODE };
 
-			sequenceService.getNextValue.mockResolvedValue(BigInt(1));
-			encondingService.encondeBase62.mockReturnValue(SHORT_CODE);
+			sequenceService.getNextValue.mockResolvedValue(SEQUENCE_VALUE);
 			prismaService.short_urls.create.mockResolvedValue(record);
 
 			const result = await shortenService.shorten(url);
