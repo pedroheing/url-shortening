@@ -1,6 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { UserAgentResult } from 'src/common/decorators/user-agent.decorator';
-import { GeolocationService } from 'src/core/geolocation/geolocation.interface';
 import { ClicksQueueService } from 'src/metrics/queues/clicks/clicks-queue.service';
 import { ShortenCacheService, ShortUrlCache } from 'src/shorten/services/shorten-cache.service';
 import { ShortenService } from 'src/shorten/shorten.service';
@@ -12,23 +10,20 @@ export class RedirectService {
 		private readonly shortenService: ShortenService,
 		private readonly shortenCacheService: ShortenCacheService,
 		private readonly clicksQueue: ClicksQueueService,
-		private readonly geolocationService: GeolocationService,
 	) {}
 
-	public async resolveAcess(shortCode: string, ip: string, userAgent: UserAgentResult): Promise<string> {
+	public async resolveAcess(shortCode: string, ip: string, userAgent: string): Promise<string> {
 		const shortUrl = await this.getOriginalUrlFromCacheOrDatabase(shortCode);
 		if (!shortUrl) {
 			throw new OriginalUrlNotFoundException(`Cannot find original URL with code ${shortCode}`);
 		}
-		await this.registerClick(shortUrl, ip, userAgent);
+		this.registerClick(shortUrl, ip, userAgent);
 		return shortUrl.url;
 	}
 
-	private async registerClick(shortUrl: ShortUrlCache, ip: string, userAgent: UserAgentResult): Promise<void> {
-		const geo = this.geolocationService.lookupIp(ip);
-		await this.clicksQueue.add({
+	private registerClick(shortUrl: ShortUrlCache, ip: string, userAgent: string) {
+		void this.clicksQueue.add({
 			shortUrlId: shortUrl.shortUrlId,
-			geo: geo,
 			ip: ip,
 			userAgent: userAgent,
 		});

@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { mock, mockDeep } from 'jest-mock-extended';
-import { Base62 } from 'src/common/utils/base62';
+import { Base62 } from 'src/common/encoding/base62';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import { SequenceService } from './services/sequence.service';
 import { ShortenCacheService } from './services/shorten-cache.service';

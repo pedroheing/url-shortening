@@ -3,7 +3,7 @@ export abstract class GeolocationService {
 }
 
 export interface GeoInfo {
-	contry: string;
+	country: string;
 	region: string;
 	timezone: string;
 	city: string;

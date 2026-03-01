@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { short_urls } from 'generated/prisma/client';
-import { Base62 } from 'src/common/utils/base62';
+import { Base62 } from 'src/common/encoding/base62';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import { SequenceService } from './services/sequence.service';
 import { ShortenCacheService } from './services/shorten-cache.service';

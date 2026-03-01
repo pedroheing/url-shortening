@@ -10,7 +10,7 @@ export class GeoipLite implements GeolocationService {
 			return null;
 		}
 		return {
-			contry: geo.country,
+			country: geo.country,
 			region: geo.region,
 			timezone: geo.timezone,
 			city: geo.city,

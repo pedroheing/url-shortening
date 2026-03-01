@@ -1,6 +1,5 @@
 import { Test } from '@nestjs/testing';
 import { mock } from 'jest-mock-extended';
-import { UserAgentResult } from 'src/common/decorators/user-agent.decorator';
 import { GeolocationService } from 'src/core/geolocation/geolocation.interface';
 import { ClicksQueueService } from 'src/metrics/queues/clicks/clicks-queue.service';
 import { ShortUrlCache, ShortenCacheService } from 'src/shorten/services/shorten-cache.service';
@@ -36,7 +35,7 @@ describe('RedirectService', () => {
 		const shortCode = 'abc123';
 		const originalUrl = 'https://test.com';
 		const ip = '127.0.0.1';
-		const userAgent: UserAgentResult = { browser: {}, device: {}, os: {} };
+		const userAgent = '';
 		const cachedShortUrl: ShortUrlCache = { shortUrlId: 1, url: originalUrl };
 
 		it('should return URL from cache and refresh TTL on cache hit', async () => {
