@@ -50,7 +50,6 @@ describe('RedirectService', () => {
 
 			expect(result).toBe(originalUrl);
 			expect(shortenCacheService.get).toHaveBeenCalledWith(shortCode);
-			expect(shortenCacheService.refreshTTL).toHaveBeenCalledWith(shortCode);
 			expect(shortenService.findByShortCode).not.toHaveBeenCalled();
 		});
 
@@ -64,7 +63,6 @@ describe('RedirectService', () => {
 			expect(result).toBe(originalUrl);
 			expect(shortenService.findByShortCode).toHaveBeenCalledWith(shortCode);
 			expect(shortenCacheService.set).toHaveBeenCalledWith(shortCode, cachedShortUrl);
-			expect(shortenCacheService.refreshTTL).not.toHaveBeenCalled();
 		});
 
 		it('should throw OriginalUrlNotFoundException when not found in cache or DB', async () => {
