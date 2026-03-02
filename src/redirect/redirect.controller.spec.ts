@@ -28,16 +28,16 @@ describe('RedirectController', () => {
 		const userAgent = '';
 
 		it('should return a redirect response with FOUND status', async () => {
-			redirectService.resolveAcess.mockResolvedValue(originalUrl);
+			redirectService.resolveAccess.mockResolvedValue(originalUrl);
 
 			const result = await redirectController.redirect(shortCode, ip, request);
 
 			expect(result).toEqual({ url: originalUrl, statusCode: HttpStatus.FOUND });
-			expect(redirectService.resolveAcess).toHaveBeenCalledWith(shortCode, ip, userAgent);
+			expect(redirectService.resolveAccess).toHaveBeenCalledWith(shortCode, ip, userAgent);
 		});
 
 		it('should throw NotFoundException when short code is not found', async () => {
-			redirectService.resolveAcess.mockRejectedValue(new OriginalUrlNotFoundException());
+			redirectService.resolveAccess.mockRejectedValue(new OriginalUrlNotFoundException());
 
 			await expect(redirectController.redirect(shortCode, ip, request)).rejects.toThrow(NotFoundException);
 		});
