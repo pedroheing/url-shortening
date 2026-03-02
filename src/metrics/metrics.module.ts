@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { GeolocationModule } from 'src/core/geolocation/geolocation.module';
 import { RedisModule } from 'src/core/infra/redis/redis.module';
 import { PrismaModule } from 'src/core/prisma/prisma.module';
 import { ShortenModule } from 'src/shorten/shorten.module';
@@ -9,7 +10,7 @@ import { ClicksWorker } from './queues/clicks/clicks.worker';
 import { RedisClicksQueueService } from './queues/clicks/providers/redis-clicks-queue.service';
 
 @Module({
-	imports: [RedisModule, PrismaModule, ShortenModule],
+	imports: [RedisModule, PrismaModule, ShortenModule, GeolocationModule],
 	providers: [MetricsService, ClicksWorker, { provide: ClicksQueueService, useClass: RedisClicksQueueService }],
 	controllers: [MetricsController],
 	exports: [ClicksQueueService],

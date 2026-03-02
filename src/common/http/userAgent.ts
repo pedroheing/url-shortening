@@ -1,6 +1,8 @@
 import { UAParser } from 'ua-parser-js';
+import { isAIAssistant, isAICrawler, isBot } from 'ua-parser-js/bot-detection';
 
 export interface UserAgentResult {
+	isBot: boolean;
 	browser: {
 		name?: string;
 		version?: string;
@@ -22,6 +24,7 @@ export class UserAgent {
 		const parser = new UAParser(userAgent);
 		const parseResult = parser.getResult();
 		return {
+			isBot: this.isBot(userAgent),
 			browser: {
 				name: parseResult.browser.name,
 				version: parseResult.browser.version,
@@ -37,5 +40,9 @@ export class UserAgent {
 				version: parseResult.os.version,
 			},
 		};
+	}
+
+	private static isBot(userAgent: string) {
+		return isBot(userAgent) || isAICrawler(userAgent) || isAIAssistant(userAgent);
 	}
 }

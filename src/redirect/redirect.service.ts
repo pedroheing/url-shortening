@@ -21,12 +21,15 @@ export class RedirectService {
 		return shortUrl.url;
 	}
 
-	private registerClick(shortUrl: ShortUrlCache, ip: string, userAgent: string) {
-		void this.clicksQueue.add({
-			shortUrlId: shortUrl.shortUrlId,
-			ip: ip,
-			userAgent: userAgent,
-		});
+	private registerClick(shortUrl: ShortUrlCache, ip: string, userAgent: string): void {
+		// fire and forget for performance
+		this.clicksQueue
+			.add({
+				shortUrlId: shortUrl.shortUrlId,
+				ip: ip,
+				userAgent: userAgent,
+			})
+			.catch((err) => console.log('Error adding click event to queue: ' + err));
 	}
 
 	private async getOriginalUrlFromCacheOrDatabase(shortCode: string): Promise<ShortUrlCache | null> {
