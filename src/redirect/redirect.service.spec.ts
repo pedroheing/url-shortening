@@ -46,7 +46,7 @@ describe('RedirectService', () => {
 			shortenCacheService.get.mockResolvedValue(cachedShortUrl);
 			clicksQueueService.add.mockResolvedValue(undefined);
 
-			const result = await redirectService.resolveAcess(shortCode, ip, userAgent);
+			const result = await redirectService.resolveAccess(shortCode, ip, userAgent);
 
 			expect(result).toBe(originalUrl);
 			expect(shortenCacheService.get).toHaveBeenCalledWith(shortCode);
@@ -59,7 +59,7 @@ describe('RedirectService', () => {
 			shortenService.findByShortCode.mockResolvedValue({ shortUrlId: 1, shortCode, url: originalUrl, shortUrl: '' });
 			clicksQueueService.add.mockResolvedValue(undefined);
 
-			const result = await redirectService.resolveAcess(shortCode, ip, userAgent);
+			const result = await redirectService.resolveAccess(shortCode, ip, userAgent);
 
 			expect(result).toBe(originalUrl);
 			expect(shortenService.findByShortCode).toHaveBeenCalledWith(shortCode);
@@ -71,7 +71,7 @@ describe('RedirectService', () => {
 			shortenCacheService.get.mockResolvedValue(null);
 			shortenService.findByShortCode.mockResolvedValue(null);
 
-			await expect(redirectService.resolveAcess(shortCode, ip, userAgent)).rejects.toThrow(OriginalUrlNotFoundException);
+			await expect(redirectService.resolveAccess(shortCode, ip, userAgent)).rejects.toThrow(OriginalUrlNotFoundException);
 			expect(shortenCacheService.set).not.toHaveBeenCalled();
 		});
 	});

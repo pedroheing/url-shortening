@@ -28,7 +28,7 @@ export class RedirectController {
 	})
 	public async redirect(@Param('shortCode') shortCode: string, @Ip() ip: string, @Req() request: Request): Promise<HttpRedirectResponse> {
 		try {
-			const url = await this.redirectService.resolveAcess(shortCode, ip, request.header('user-agent') ?? '');
+			const url = await this.redirectService.resolveAccess(shortCode, ip, request.header('user-agent') ?? '');
 			return { url, statusCode: HttpStatus.FOUND };
 		} catch (error) {
 			if (error instanceof OriginalUrlNotFoundException) {
