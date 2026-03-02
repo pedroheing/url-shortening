@@ -15,18 +15,21 @@ export class ClicksWorker {
 		private readonly geolocationService: GeolocationService,
 	) {}
 
-	@Interval(100)
+	@Interval(1000)
 	async processQueue(): Promise<void> {
 		const clicks = await this.clicksQueue.getBatch(1000);
 		if (!clicks.length) return;
 		await this.prismaService.clicks.createMany({
-			data: clicks.map((click) => this.processClick(click)),
+			data: clicks.map((click) => this.processClick(click)).filter((c) => c !== null),
 		});
 	}
 
-	private processClick(click: RegisterClickData): Prisma.clicksCreateManyInput {
-		const geo = this.geolocationService.lookupIp(click.ip);
+	private processClick(click: RegisterClickData): null | Prisma.clicksCreateManyInput {
 		const userAgent = UserAgent.parse(click.userAgent);
+		if (userAgent.isBot) {
+			return null;
+		}
+		const geo = this.geolocationService.lookupIp(click.ip);
 		return {
 			short_url_id: click.shortUrlId,
 			ip_address: click.ip,

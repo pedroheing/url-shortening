@@ -17,6 +17,10 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
-    "types": ["node", "jest"]
+    "types": ["node", "jest"],
+    "paths": {
+      "ua-parser-js/extensions": ["node_modules/ua-parser-js/src/extensions/ua-parser-extensions"],
+      "ua-parser-js/bot-detection": ["node_modules/ua-parser-js/src/bot-detection/bot-detection"]
+    }
   }
 }
