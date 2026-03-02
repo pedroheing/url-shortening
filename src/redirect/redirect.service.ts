@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { DistributedLockService } from 'src/core/distributed-lock/distributed-lock.interface';
 import { ClicksQueueService } from 'src/metrics/queues/clicks/clicks-queue.service';
 import { ShortenCacheService, ShortUrlCache } from 'src/shorten/services/shorten-cache.service';
 import { ShortenService } from 'src/shorten/shorten.service';
@@ -10,10 +11,11 @@ export class RedirectService {
 		private readonly shortenService: ShortenService,
 		private readonly shortenCacheService: ShortenCacheService,
 		private readonly clicksQueue: ClicksQueueService,
+		private readonly distributedLockService: DistributedLockService,
 	) {}
 
 	public async resolveAcess(shortCode: string, ip: string, userAgent: string): Promise<string> {
-		const shortUrl = await this.getOriginalUrlFromCacheOrDatabase(shortCode);
+		const shortUrl = await this.getShortUrlFromCacheOrDb(shortCode);
 		if (!shortUrl) {
 			throw new OriginalUrlNotFoundException(`Cannot find original URL with code ${shortCode}`);
 		}
@@ -32,12 +34,33 @@ export class RedirectService {
 			.catch((err) => console.log('Error adding click event to queue: ' + err));
 	}
 
-	private async getOriginalUrlFromCacheOrDatabase(shortCode: string): Promise<ShortUrlCache | null> {
+	private async getShortUrlFromCacheOrDb(shortCode: string): Promise<ShortUrlCache | null> {
+		const cachedShortUrl = await this.getShorUrlFromCache(shortCode);
+		if (cachedShortUrl) {
+			return cachedShortUrl;
+		}
+		const lock = await this.distributedLockService.acquire(`shortUrl:${shortCode}:dblock`);
+		try {
+			const cachedShortUrl = await this.getShorUrlFromCache(shortCode);
+			if (cachedShortUrl) {
+				return cachedShortUrl;
+			}
+			return this.getShortUrlFromDb(shortCode);
+		} finally {
+			await lock.release();
+		}
+	}
+
+	private async getShorUrlFromCache(shortCode: string) {
 		const cachedShortUrl = await this.shortenCacheService.get(shortCode);
 		if (cachedShortUrl) {
 			await this.shortenCacheService.refreshTTL(shortCode);
 			return cachedShortUrl;
 		}
+		return null;
+	}
+
+	private async getShortUrlFromDb(shortCode: string) {
 		const shortUrl = await this.shortenService.findByShortCode(shortCode);
 		if (!shortUrl) {
 			return null;

@@ -1,5 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { mock } from 'jest-mock-extended';
+import { AcquiredLock, DistributedLockService } from 'src/core/distributed-lock/distributed-lock.interface';
 import { GeolocationService } from 'src/core/geolocation/geolocation.interface';
 import { ClicksQueueService } from 'src/metrics/queues/clicks/clicks-queue.service';
 import { ShortUrlCache, ShortenCacheService } from 'src/shorten/services/shorten-cache.service';
@@ -13,6 +14,7 @@ describe('RedirectService', () => {
 	const shortenCacheService = mock<ShortenCacheService>();
 	const clicksQueueService = mock<ClicksQueueService>();
 	const geolocationService = mock<GeolocationService>();
+	const distributedLockService = mock<DistributedLockService>();
 
 	beforeEach(async () => {
 		const module = await Test.createTestingModule({
@@ -22,9 +24,11 @@ describe('RedirectService', () => {
 				{ provide: ShortenCacheService, useValue: shortenCacheService },
 				{ provide: ClicksQueueService, useValue: clicksQueueService },
 				{ provide: GeolocationService, useValue: geolocationService },
+				{ provide: DistributedLockService, useValue: distributedLockService },
 			],
 		}).compile();
 		redirectService = module.get(RedirectService);
+		distributedLockService.acquire.mockResolvedValue(mock<AcquiredLock>());
 	});
 
 	it('should be defined', () => {
