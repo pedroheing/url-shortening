@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { Prisma } from 'generated/prisma/client';
-import { UserAgent } from 'src/common/http/userAgent';
+import { UserAgent } from 'src/common/http/user-agent';
 import { GeolocationService } from 'src/core/geolocation/geolocation.interface';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import { ClicksQueueService } from './clicks-queue.service';
