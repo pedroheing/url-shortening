@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { short_urls } from 'generated/prisma/client';
+import { Prisma, short_urls } from 'generated/prisma/client';
 import { Base62 } from 'src/common/encoding/base62';
 import { PrismaService } from 'src/core/prisma/prisma.service';
+import { ShortUrlNotFoundException } from './errors/short-url-not-found.error';
 import { SequenceService } from './services/sequence.service';
 import { ShortenCacheService } from './services/shorten-cache.service';
 import { ShortenConfigService } from './services/shorten-config.service';
@@ -49,29 +50,34 @@ export class ShortenService {
 	}
 
 	public async updateByShortCode(shortCode: string, url: string): Promise<ShortenUrl> {
-		const record = await this.prismaService.short_urls.update({
-			where: {
-				short_code: shortCode,
-			},
-			data: {
-				url: url,
-			},
-		});
-		await this.shortenCacheService.set(shortCode, {
-			url: url,
-			shortUrlId: record.short_url_id,
-		});
-		return this.buildResponse(record);
+		try {
+			const record = await this.prismaService.short_urls.update({
+				where: { short_code: shortCode },
+				data: { url },
+			});
+			await this.shortenCacheService.set(shortCode, { url, shortUrlId: record.short_url_id });
+			return this.buildResponse(record);
+		} catch (error) {
+			if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+				throw new ShortUrlNotFoundException();
+			}
+			throw error;
+		}
 	}
 
 	public async deleteByShortCode(shortCode: string): Promise<ShortenUrl> {
-		const record = await this.prismaService.short_urls.delete({
-			where: {
-				short_code: shortCode,
-			},
-		});
-		await this.shortenCacheService.invalidate(shortCode);
-		return this.buildResponse(record);
+		try {
+			const record = await this.prismaService.short_urls.delete({
+				where: { short_code: shortCode },
+			});
+			await this.shortenCacheService.markAsDeleted(shortCode);
+			return this.buildResponse(record);
+		} catch (error) {
+			if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+				throw new ShortUrlNotFoundException();
+			}
+			throw error;
+		}
 	}
 
 	private buildResponse(record: short_urls): ShortenUrl {

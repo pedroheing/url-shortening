@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DistributedLockService } from 'src/core/distributed-lock/distributed-lock.interface';
 import { ClicksQueueService } from 'src/metrics/queues/clicks/clicks-queue.service';
-import { ShortenCacheService, ShortUrlCache } from 'src/shorten/services/shorten-cache.service';
+import { CacheEntryType, ShortCodeCacheEntry, ShortenCacheService, ShortUrlCache } from 'src/shorten/services/shorten-cache.service';
 import { ShortenService } from 'src/shorten/shorten.service';
 import { OriginalUrlNotFoundException } from './error/original-url-not-found.error';
 
@@ -39,16 +39,17 @@ export class RedirectService {
 	private async getShortUrlFromCacheOrDb(shortCode: string): Promise<ShortUrlCache | null> {
 		const cachedShortUrl = await this.shortenCacheService.get(shortCode);
 		if (cachedShortUrl) {
-			return cachedShortUrl;
+			return this.resolveCacheReturn(cachedShortUrl);
 		}
 		const lock = await this.distributedLockService.acquire(`shortUrl:${shortCode}:dblock`);
 		try {
 			const cachedShortUrl = await this.shortenCacheService.get(shortCode);
 			if (cachedShortUrl) {
-				return cachedShortUrl;
+				return this.resolveCacheReturn(cachedShortUrl);
 			}
 			const shortUrl = await this.shortenService.findByShortCode(shortCode);
 			if (!shortUrl) {
+				await this.shortenCacheService.markAsDeleted(shortCode);
 				return null;
 			}
 			const shortUrlCache: ShortUrlCache = {
@@ -60,5 +61,12 @@ export class RedirectService {
 		} finally {
 			await lock.release();
 		}
+	}
+
+	private resolveCacheReturn(cachedShortUrl: ShortCodeCacheEntry): ShortUrlCache | null {
+		if (cachedShortUrl.type === CacheEntryType.Negative) {
+			return null;
+		}
+		return cachedShortUrl.data;
 	}
 }
