@@ -1,7 +1,9 @@
 import { Test } from '@nestjs/testing';
+import { Prisma } from 'generated/prisma/client';
 import { mock, mockDeep } from 'jest-mock-extended';
 import { Base62 } from 'src/common/encoding/base62';
 import { PrismaService } from 'src/core/prisma/prisma.service';
+import { ShortUrlNotFoundException } from './errors/short-url-not-found.error';
 import { SequenceService } from './services/sequence.service';
 import { ShortenCacheService } from './services/shorten-cache.service';
 import { ShortenConfigService } from './services/shorten-config.service';
@@ -124,6 +126,14 @@ describe('ShortenService', () => {
 				url,
 			});
 		});
+
+		it('should throw ShortUrlNotFoundException when short code does not exist', async () => {
+			prismaService.short_urls.update.mockRejectedValue(
+				new Prisma.PrismaClientKnownRequestError('record not found', { code: 'P2025', clientVersion: '0' }),
+			);
+
+			await expect(shortenService.updateByShortCode(SHORT_CODE, 'https://new.example.com')).rejects.toThrow(ShortUrlNotFoundException);
+		});
 	});
 
 	describe('deleteByShortCode', () => {
@@ -143,7 +153,15 @@ describe('ShortenService', () => {
 				shortUrl: SHORT_URL,
 			});
 			expect(prismaService.short_urls.delete).toHaveBeenCalledWith({ where: { short_code: SHORT_CODE } });
-			expect(shortenCacheService.invalidate).toHaveBeenCalledWith(SHORT_CODE);
+			expect(shortenCacheService.markAsDeleted).toHaveBeenCalledWith(SHORT_CODE);
+		});
+
+		it('should throw ShortUrlNotFoundException when short code does not exist', async () => {
+			prismaService.short_urls.delete.mockRejectedValue(
+				new Prisma.PrismaClientKnownRequestError('record not found', { code: 'P2025', clientVersion: '0' }),
+			);
+
+			await expect(shortenService.deleteByShortCode(SHORT_CODE)).rejects.toThrow(ShortUrlNotFoundException);
 		});
 	});
 });

@@ -1,9 +1,9 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Patch, Post } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { Prisma } from 'generated/prisma/client';
 import { ShortenResponseDto } from './dto/shorten-response.dto';
 import { ShortenDto } from './dto/shorten.dto';
 import { UpdateOriginalUrlDto } from './dto/update-original-url.dto';
+import { ShortUrlNotFoundException } from './errors/short-url-not-found.error';
 import { ShortenUrl } from './shorten.entity';
 import { ShortenService } from './shorten.service';
 
@@ -69,9 +69,7 @@ export class ShortenController {
 		try {
 			return this.mapToDto(await this.shortenService.updateByShortCode(shortCode, dto.url));
 		} catch (error) {
-			if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-				throw new NotFoundException();
-			}
+			if (error instanceof ShortUrlNotFoundException) throw new NotFoundException();
 			throw error;
 		}
 	}
@@ -92,9 +90,7 @@ export class ShortenController {
 		try {
 			await this.shortenService.deleteByShortCode(shortCode);
 		} catch (error) {
-			if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-				throw new NotFoundException();
-			}
+			if (error instanceof ShortUrlNotFoundException) throw new NotFoundException();
 			throw error;
 		}
 	}
