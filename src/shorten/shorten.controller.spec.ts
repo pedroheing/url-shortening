@@ -1,14 +1,9 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { Prisma } from 'generated/prisma/client';
 import { mock } from 'jest-mock-extended';
+import { ShortUrlNotFoundException } from './errors/short-url-not-found.error';
 import { ShortenController } from './shorten.controller';
 import { ShortenService } from './shorten.service';
-
-const p2025Error = new Prisma.PrismaClientKnownRequestError('Record not found', {
-	code: 'P2025',
-	clientVersion: '0.0.0',
-});
 
 describe('ShortenController', () => {
 	let shortenController: ShortenController;
@@ -86,8 +81,8 @@ describe('ShortenController', () => {
 			expect(resp).toMatchObject({ url, shortCode });
 		});
 
-		it('should throw NotFoundException on P2025 error', async () => {
-			shortenService.updateByShortCode.mockRejectedValue(p2025Error);
+		it('should throw NotFoundException on ShortUrlNotFoundException error', async () => {
+			shortenService.updateByShortCode.mockRejectedValue(new ShortUrlNotFoundException());
 
 			await expect(shortenController.update('abc123', { url: 'https://example.com' })).rejects.toThrow(NotFoundException);
 		});
@@ -103,8 +98,8 @@ describe('ShortenController', () => {
 			expect(shortenService.deleteByShortCode).toHaveBeenCalledWith(shortCode);
 		});
 
-		it('should throw NotFoundException on P2025 error', async () => {
-			shortenService.deleteByShortCode.mockRejectedValue(p2025Error);
+		it('should throw NotFoundException on ShortUrlNotFoundException error', async () => {
+			shortenService.deleteByShortCode.mockRejectedValue(new ShortUrlNotFoundException());
 
 			await expect(shortenController.delete('abc123')).rejects.toThrow(NotFoundException);
 		});
