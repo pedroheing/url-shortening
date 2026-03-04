@@ -6,7 +6,7 @@
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)
 [![Prisma](https://img.shields.io/badge/Prisma-2D3748?logo=prisma&logoColor=white)](#)
 
-A URL shortening service built with NestJS, featuring a cache-first redirect strategy with Redis, asynchronous click processing via a background worker, and per-click metrics covering geographic and device data.
+A URL shortening service built with NestJS, featuring a cache-first redirect strategy with Redis, asynchronous click processing via a background worker, per-click metrics covering geographic and device data, and two-tier rate limiting backed by Redis.
 
 ## Table of Contents
 
@@ -14,10 +14,14 @@ A URL shortening service built with NestJS, featuring a cache-first redirect str
     - [URL Shortening with Base62 Encoding](#url-shortening-with-base62-encoding)
     - [Cache-First Redirect Strategy](#cache-first-redirect-strategy)
     - [Asynchronous Click Processing](#asynchronous-click-processing)
+    - [Rate Limiting](#rate-limiting)
 - [Design Decisions and Trade-offs](#design-decisions-and-trade-offs)
     - [Database Sequences for Unique Short Codes](#database-sequences-for-unique-short-codes)
     - [Redis Queue for Click Ingestion](#redis-queue-for-click-ingestion)
     - [Cache-First vs. Database-First Redirect](#cache-first-vs-database-first-redirect)
+    - [Two-Tier Rate Limiting](#two-tier-rate-limiting)
+    - [Distributed Lock on Cache Miss](#distributed-lock-on-cache-miss)
+    - [Negative Caching](#negative-caching)
 - [Future Improvements](#future-improvements)
 - [Tech Stack](#tech-stack)
 - [Getting Started](#getting-started)
@@ -66,7 +70,7 @@ sequenceDiagram
 
 ### Cache-First Redirect Strategy
 
-Redirect lookups always check Redis first. On a cache miss, the system falls back to PostgreSQL and re-hydrates the cache.
+Redirect lookups always check Redis first. On a cache miss, a distributed lock serializes database access. Only one instance queries PostgreSQL while others wait and read from cache once it's populated. Short codes not found in the database are also cached as negative entries, so repeated lookups for deleted or non-existent codes never hit PostgreSQL.
 
 <details>
   <summary>Click to view the Redirect Flow Diagram</summary>
@@ -77,16 +81,34 @@ flowchart TD
 
   B --> C{Cache Hit?}
 
-  C -- Yes --> E[Capture click metadata]
-  C -- No --> D[Lookup in PostgreSQL]
+  C -- Yes --> D2{Negative entry?}
+  D2 -- Yes --> NOT_FOUND[404 Not Found]
+  D2 -- No --> CLICK[Capture click metadata]
 
-  D --> F{Found in DB?}
-  F -- No --> G[404 Not Found]
-  F -- Yes --> H[Hydrate Redis Cache]
-  H --> E
+  C -- No --> D[Acquire distributed lock]
 
-  E --> I[Enqueue click event to Redis]
-  I --> J[302 Redirect to original URL]
+  D --> E[Lookup in Redis Cache again]
+  E --> F{Cache Hit?}
+
+  F -- Yes --> D3{Negative entry?}
+  D3 -- Yes --> REL1B[Release lock]
+  REL1B --> NOT_FOUND
+  D3 -- No --> REL1[Release lock]
+  REL1 --> CLICK
+
+  F -- No --> G[Lookup in PostgreSQL]
+  G --> H{Found in DB?}
+
+  H -- No --> NEG[Cache negative entry in Redis]
+  NEG --> REL2[Release lock]
+  REL2 --> NOT_FOUND
+
+  H -- Yes --> I[Hydrate Redis Cache]
+  I --> REL3[Release lock]
+  REL3 --> CLICK
+
+  CLICK --> J[Enqueue click event to Redis]
+  J --> K[302 Redirect to original URL]
 ```
 
 </details>
@@ -114,7 +136,7 @@ sequenceDiagram
 
   Note over Worker: Runs every 1 second
 
-  Worker->>Queue: LPOP up to 100 events
+  Worker->>Queue: LPOP up to 1000 events
   Queue-->>Worker: Batch of click events
 
   Worker->>DB: Bulk INSERT into clicks table
@@ -122,6 +144,15 @@ sequenceDiagram
 ```
 
 </details>
+
+### Rate Limiting
+
+All endpoints are protected by two independent rate limiters applied on every request:
+
+- **Per-IP:** limits how many requests a single IP address can make within a time window.
+- **Global:** limits the total number of requests across all clients within a time window, regardless of IP.
+
+Both counters are stored in Redis, so limits are shared across all application instances and survive process restarts. The real client IP is extracted from proxy headers (`X-Forwarded-For`, etc.) before being used as the key, ensuring accurate tracking behind load balancers.
 
 ## Design Decisions and Trade-offs
 
@@ -143,19 +174,34 @@ sequenceDiagram
 
 **Decision:** The redirect endpoint resolves short codes from Redis and only falls back to PostgreSQL on a cache miss.
 
-- **Rationale:** For a URL shortener, read traffic (redirects) vastly outnumbers write traffic (URL creation). Serving the common case entirely from Redis reduces database load and keeps redirect latency consistently low.
+- **Rationale:** For a URL shortener, read traffic vastly outnumbers write traffic. Serving the common case entirely from Redis reduces database load and keeps redirect latency consistently low.
 - **Trade-off:** Redis is a hard dependency with no fallback. If it goes down, redirects fail completely.
+
+### Two-Tier Rate Limiting
+
+**Decision:** Rate limiting is enforced at two independent levels on every request: per-IP and globally across all clients.
+
+- **Rationale:** A per-IP limit alone does not protect against distributed abuse where many IPs each stay just below the threshold. A global limit caps total throughput regardless of how the traffic is distributed. Both counters live in Redis so the limits hold across multiple application instances.
+- **Trade-off:** Every request incurs two Redis increments. This adds a small amount of latency but is negligible compared to the cost of the redirect flow itself.
+
+### Distributed Lock on Cache Miss
+
+**Decision:** On a cache miss, a distributed lock is acquired before querying PostgreSQL. After acquiring the lock, the cache is checked again before going to the database.
+
+- **Rationale:** Without a lock, a burst of requests for the same uncached short code would all hit the database at once. The double-checked pattern means only the first request queries the database; the rest wait on the lock and read from the cache once it's populated.
+- **Trade-off:** Acquiring a lock adds latency to cache-miss requests. Since misses are rare once the cache is warm, this is an acceptable cost to avoid database overload during traffic spikes.
+
+### Negative Caching
+
+**Decision:** When a short code lookup misses the database, a negative cache entry is stored in Redis with the same TTL used for positive entries.
+
+- **Rationale:** Without negative caching, every request for a deleted or non-existent short code would follow the full cache-miss path: acquire lock → query DB → get nothing → return 404. Under a burst of such requests (e.g., a deleted URL still being clicked), this would hammer the database with identical no-op queries. Caching the negative result short-circuits subsequent requests at the Redis layer.
+- **Trade-off:** Non-existent or deleted short codes probed by bots or stale links will occupy cache space for the full TTL duration. This is bounded by the TTL and is negligible compared to the protection it provides.
 
 ## Future Improvements
 
-- **Rate Limiting:**
-  Implement per-IP or per-user rate limiting on the shorten endpoint to prevent abuse.
-
 - **Custom Short Codes:**
   Allow users to specify a custom alias instead of receiving an auto-generated short code.
-
-- **Redis Fault Tolerance:**
-  Wrap Redis calls in the redirect path with error handling so that a Redis outage degrades gracefully, falling back to direct database reads and skipping click recording, instead of causing complete service failure.
 
 ## Tech Stack
 
@@ -197,6 +243,10 @@ Default variables:
 | `REDIS_PORT`                  | Redis port                                | `6379`                                                                    |
 | `SHORT_URL_BASE`              | Base URL prepended to short codes         | `http://localhost:3000`                                                   |
 | `SHORT_URL_CACHE_TTL_SECONDS` | Redis TTL for cached short URLs (seconds) | `300`                                                                     |
+| `THROTTLE_IP_TTL`             | Rate limit window per IP (milliseconds)   | `60000`                                                                   |
+| `THROTTLE_IP_LIMIT`           | Max requests per IP per window            | `100`                                                                     |
+| `THROTTLE_GLOBAL_TTL`         | Global rate limit window (milliseconds)   | `60000`                                                                   |
+| `THROTTLE_GLOBAL_LIMIT`       | Max total requests per window             | `100000`                                                                  |
 
 ### Execution
 
