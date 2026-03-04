@@ -3,7 +3,7 @@ import { mock } from 'jest-mock-extended';
 import { AcquiredLock, DistributedLockService } from 'src/core/distributed-lock/distributed-lock.interface';
 import { GeolocationService } from 'src/core/geolocation/geolocation.interface';
 import { ClicksQueueService } from 'src/metrics/queues/clicks/clicks-queue.service';
-import { ShortUrlCache, ShortenCacheService } from 'src/shorten/services/shorten-cache.service';
+import { CacheEntryType, ShortUrlCache, ShortenCacheService } from 'src/shorten/services/shorten-cache.service';
 import { ShortenService } from 'src/shorten/shorten.service';
 import { OriginalUrlNotFoundException } from './error/original-url-not-found.error';
 import { RedirectService } from './redirect.service';
@@ -40,7 +40,8 @@ describe('RedirectService', () => {
 		const originalUrl = 'https://test.com';
 		const ip = '127.0.0.1';
 		const userAgent = '';
-		const cachedShortUrl: ShortUrlCache = { shortUrlId: 1, url: originalUrl };
+		const shortUrlCache: ShortUrlCache = { shortUrlId: 1, url: originalUrl };
+		const cachedShortUrl = { type: CacheEntryType.Positive, data: shortUrlCache };
 
 		it('should return URL from cache and refresh TTL on cache hit', async () => {
 			shortenCacheService.get.mockResolvedValue(cachedShortUrl);
@@ -62,7 +63,14 @@ describe('RedirectService', () => {
 
 			expect(result).toBe(originalUrl);
 			expect(shortenService.findByShortCode).toHaveBeenCalledWith(shortCode);
-			expect(shortenCacheService.set).toHaveBeenCalledWith(shortCode, cachedShortUrl);
+			expect(shortenCacheService.set).toHaveBeenCalledWith(shortCode, shortUrlCache);
+		});
+
+		it('should return null when cache has a negative entry', async () => {
+			shortenCacheService.get.mockResolvedValue({ type: CacheEntryType.Negative });
+
+			await expect(redirectService.resolveAccess(shortCode, ip, userAgent)).rejects.toThrow(OriginalUrlNotFoundException);
+			expect(shortenService.findByShortCode).not.toHaveBeenCalled();
 		});
 
 		it('should throw OriginalUrlNotFoundException when not found in cache or DB', async () => {
